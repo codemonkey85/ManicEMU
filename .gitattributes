@@ -1,0 +1,2 @@
+Cores/**/*.libretro.framework/** filter=lfs diff=lfs merge=lfs -text
+ManicSupport/Resources/System.core filter=lfs diff=lfs merge=lfs -text
