@@ -27,7 +27,7 @@ extension GameType {
         case "cue":
             return [.ps1, .mcd, .ss, .dc, .dos, .pce, .amiga]
         case "m3u":
-            return [.ps1, .mcd, .ss, .dc, .dos, .pce, .c64, .amiga]
+            return [.ps1, .mcd, .ss, .dc, .dos, .pce, .c64, .amiga, .ngc]
         case "pbp":
             return [.ps1, .psp]
         case "ccd":
@@ -130,6 +130,10 @@ extension GameType {
             self = .c64
         } else if ["adf", "adz", "dms", "fdi", "ipf", "hdf", "hdz", "lha", "slave", "info", "nrg", "mds", "uae", "rp9"].contains(ext) {
             self = .amiga
+        } else if ["ws", "wsc", "pc2", "pcv2"].contains(ext) {
+            self = .wsc
+        } else if ["swf"].contains(ext) {
+            self = .flash
         } else {
             self = .notSupport
         }
@@ -228,6 +232,12 @@ extension GameType {
             self = .c64
         } else if shortName.uppercased() == "Amiga".uppercased() {
             self = .amiga
+        } else if shortName.uppercased() == "WSC" {
+            self = .wsc
+        } else if shortName.uppercased() == "WS" {
+            self = .ws
+        } else if shortName.uppercased() == "FLASH" {
+            self = .flash
         } else {
             return nil
         }
@@ -284,6 +294,9 @@ extension GameType {
         case .ngpc: return "Neo Geo Pocket Color"
         case .c64: return "Commodore 64"
         case .amiga: return "Commodore Amiga"
+        case .wsc: return "WonderSwan Color"
+        case .ws: return "WonderSwan"
+        case .flash: return "Adobe Flash"
         default: return ""
         }
     }
@@ -339,6 +352,9 @@ extension GameType {
         case .ngpc: return  NSLocalizedString("NGPC", comment: "")
         case .c64: return  NSLocalizedString("C64", comment: "")
         case .amiga: return  NSLocalizedString("Amiga", comment: "")
+        case .wsc: return  NSLocalizedString("WSC", comment: "")
+        case .ws: return  NSLocalizedString("WS", comment: "")
+        case .flash: return  NSLocalizedString("Flash", comment: "")
         case .unknown: return R.string.localizable.unknownPlatform()
         default: return ""
         }
@@ -395,6 +411,9 @@ extension GameType {
         case .ngpc: return 1999
         case .c64: return 1982
         case .amiga: return 1985
+        case .wsc: return 2000
+        case .ws: return 1999
+        case .flash: return 1996
         default: return 0
         }
     }
@@ -439,6 +458,8 @@ extension GameType {
         case .ngp: return NGP.core
         case .c64: return C64.core
         case .amiga: return Amiga.core
+        case .wsc: return WSC.core
+        case .flash: return FLASH.core
         default: return nil
         }
     }
@@ -508,6 +529,7 @@ extension GameType {
         case .jaguar: return "jag"
         case .lynx: return "lnx"
         case .j2me: return nil
+        case .flash: return nil
         case .dos: return nil
         case .symbian: return nil
         case .pce, .turbografx_16: return "pce"
@@ -653,6 +675,10 @@ extension GameType {
             return .snk
         case .c64, .amiga:
             return .commodore
+        case .wsc, .ws:
+            return .bandai
+        case .flash:
+            return .adobe
         default:
             return .nintendo
         }
@@ -794,6 +820,12 @@ extension GameType {
                 image = R.image.c64_group_brand()
             } else if self == .amiga {
                 image = R.image.amiga_group_brand()
+            } else if self == .wsc {
+                image = R.image.wsc_group_brand()
+            } else if self == .ws {
+                image = R.image.ws_group_brand()
+            } else if self == .flash {
+                image = R.image.flash_group_brand()
             } else if self == .ps2 {
                 image = R.image.ps2_group_brand()
             }
@@ -814,6 +846,7 @@ extension GameType {
     
     var supportShaders: Bool {
         if self == .j2me ||
+            self == .flash ||
             externalType {
             return false
         }

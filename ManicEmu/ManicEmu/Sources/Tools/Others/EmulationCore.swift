@@ -47,10 +47,13 @@ enum EmulationCore: CaseIterable {
          Dolphin,
          BeetlePCE,
          BeetleNeoPop,
+         BeetleWonderSwan,
          VICEx64sc,
          PUAE,
          gpSP,
-         MesenS
+         MesenS,
+         Symbian,
+         Ruffle
     
     var name: String {
         switch self {
@@ -132,6 +135,8 @@ enum EmulationCore: CaseIterable {
             "Beetle PCE"
         case .BeetleNeoPop:
             "Beetle NeoPop"
+        case .BeetleWonderSwan:
+            "Beetle WonderSwan"
         case .VICEx64sc:
             "VICE x64sc"
         case .PUAE:
@@ -140,6 +145,10 @@ enum EmulationCore: CaseIterable {
             "gpSP"
         case .MesenS:
             "Mesen-S"
+        case .Symbian:
+            "Symbian"
+        case .Ruffle:
+            "Ruffle"
         }
     }
     
@@ -215,6 +224,8 @@ enum EmulationCore: CaseIterable {
             return [.pce]
         case .BeetleNeoPop:
             return [.ngp]
+        case .BeetleWonderSwan:
+            return [.wsc]
         case .VICEx64sc:
             return [.c64]
         case .PUAE:
@@ -223,11 +234,20 @@ enum EmulationCore: CaseIterable {
             return [.gba]
         case .MesenS:
             return [.snes, .gb, .gbc]
+        case .Symbian:
+            return [.symbian]
+        case .Ruffle:
+            return [.flash]
         }
     }
     
     var isLibretroCore: Bool {
-        if self == .Citra || self == .J2meJS || self == .JGenesis || self == .freej2me {
+        if self == .Citra ||
+            self == .J2meJS ||
+            self == .JGenesis ||
+            self == .freej2me ||
+            self == .Symbian ||
+            self == .Ruffle {
             return false
         }
         return true
@@ -263,8 +283,27 @@ enum EmulationCore: CaseIterable {
                 .DOSBoxPure,
                 .BeetlePCE,
                 .BeetleNeoPop,
+                .BeetleWonderSwan,
                 .gpSP,
                 .MesenS:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    var supportJit: Bool {
+        switch self {
+        case .Citra,
+                .Azahar,
+                .PPSSPP,
+                .melonDSDS,
+                .Mupen64PlushNext,
+                .BeetlePSXHW,
+                .Flycast,
+                .DOSBoxPure,
+                .Symbian,
+                .Dolphin:
             return true
         default:
             return false

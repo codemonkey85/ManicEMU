@@ -30,6 +30,8 @@ enum SpecialCoreOption: String {
     case ppsspp_cpu_core
     case ppsspp_internal_resolution
     case ppsspp_cheats
+    case ppsspp_software_rendering
+    case ppsspp_software_rendering_jit
     //nes fds
     case nestopia_palette
     case nestopia_aspect
@@ -119,6 +121,9 @@ enum SpecialCoreOption: String {
     case reicast_internal_resolution
     case reicast_language
     case reicast_renderer
+    case reicast_threaded_rendering
+    case reicast_dynamic_cpu_ratio
+    case reicast_sh4clock
     //arcade
     case mame_cheats_enable
     //isAzahar3DS
@@ -192,6 +197,13 @@ enum SpecialCoreOption: String {
     case dolphin_wiispeak_muted
     case dolphin_wii_logi_microphone_enable
     case dolphin_bluetooth_passthrough
+    case dolphin_language
+    /// 2 = mouse/pointer controls Wiimote IR (touch on the game image).
+    case dolphin_ir_mode
+    case dolphin_ir_yaw
+    case dolphin_ir_pitch
+    /// 0 portrait, 1 landscapeLeft, 2 upside down, 3 landscapeRight.
+    case dolphin_motion_rotation
     
     //pce
     case pce_default_joypad_type_p1
@@ -199,6 +211,12 @@ enum SpecialCoreOption: String {
     case pce_default_joypad_type_p3
     case pce_default_joypad_type_p4
     case pce_default_joypad_type_p5
+    
+    //wsc
+    case wswan_language
+    case wswan_rotate_display
+    case wswan_rotate_keymap
+    case wswan_mono_palette
     
     
     
@@ -358,7 +376,12 @@ enum SpecialCoreOption: String {
             var result: [SpecialCoreOption] = [.dolphin_cheats_enabled,
                                                .dolphin_cheats_import,
                                                .dolphin_cpu_core,
-                                               .dolphin_skip_gc_bios]
+                                               .dolphin_skip_gc_bios,
+                                               .dolphin_language,
+                                               .dolphin_ir_mode,
+                                               .dolphin_ir_yaw,
+                                               .dolphin_ir_pitch,
+                                               .dolphin_motion_rotation]
             if game.gameType == .wii {
                 result += [.dolphin_gc_sp1,
                            .dolphin_enable_gamecube_mic,
@@ -384,6 +407,11 @@ enum SpecialCoreOption: String {
                     .pce_default_joypad_type_p3,
                     .pce_default_joypad_type_p4,
                     .pce_default_joypad_type_p5]
+        } else if game.gameType == .wsc {
+            return [.wswan_language,
+                    .wswan_rotate_display,
+                    .wswan_rotate_keymap,
+                    .wswan_mono_palette]
         }
         return []
     }
@@ -445,7 +473,7 @@ enum SpecialCoreOption: String {
             ]
         } else if game.gameType == .dc {
             result = [.reicast_renderer: "Vulkan"]
-        } else if game.gameType == .arcade, game.defaultCore == 0 {
+        } else if game.gameType == .arcade, !game.isSegaArcade, game.defaultCore == 0 {
             result = [.mame_cheats_enable: "enabled"]
         } else if game.isAzahar3DS {
             result = [
@@ -527,6 +555,12 @@ enum SpecialCoreOption: String {
                 .pce_default_joypad_type_p4: "6 Buttons",
                 .pce_default_joypad_type_p5: "6 Buttons"
             ]
+        } else if game.gameType == .wsc {
+            result = [
+                .wswan_language: "english",
+                .wswan_rotate_display: "landscape",
+                .wswan_mono_palette: "default"
+            ]
         }
         return result.mapKeysAndValues({ ($0.key.rawValue, $0.value) })
     }
@@ -544,6 +578,15 @@ enum SpecialCoreOption: String {
                                                                      storeKey: .coreOptionsKey(gameId: game.id, defaultCore: game.defaultCore),
                                                                      bestEfforts: true)?.coreOptionsValue {
             resolvedCoreConfigs += storeCoreConfigs
+        }
+        // SoftGPU stays available; only its rasterizer JIT needs executable memory.
+        if game.gameType == .psp, !LibretroCore.jitAvailable() || !game.jit {
+            resolvedCoreConfigs[Self.ppsspp_software_rendering_jit.rawValue] = "disabled"
+        }
+        if game.gameType == .wii {
+            resolvedCoreConfigs[Self.dolphin_ir_mode.rawValue] = "2"
+            resolvedCoreConfigs[Self.dolphin_ir_yaw.rawValue] = "40"
+            resolvedCoreConfigs[Self.dolphin_ir_pitch.rawValue] = "30"
         }
         return resolvedCoreConfigs
     }

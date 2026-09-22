@@ -48,6 +48,8 @@ class Settings: Object, ObjectUpdatable {
     ///iCloud同步 只会在本地进行存储，意味着一个新设备安装的时候 默认都是false
 #if SIDE_LOAD
     var iCloudSyncEnable: Bool = false
+    /// UserDefaults only; safe from any thread. Do not read `Settings.defalut` off its Realm thread.
+    static var iCloudSyncEnableValue: Bool { false }
 #else
     var iCloudSyncEnable: Bool {
         set {
@@ -64,6 +66,10 @@ class Settings: Object, ObjectUpdatable {
         get {
             UserDefaults.standard.bool(forKey: "iCloudSyncEnable")
         }
+    }
+    /// UserDefaults only; safe from any thread. Do not read `Settings.defalut` off its Realm thread.
+    static var iCloudSyncEnableValue: Bool {
+        UserDefaults.standard.bool(forKey: "iCloudSyncEnable")
     }
 #endif
     ///3DS模式 默认兼容模式
@@ -145,6 +151,8 @@ class Settings: Object, ObjectUpdatable {
             realPlatform = GameType.pce.localizedName
         } else if GameType.ngpc.localizedShortName == platform {
             realPlatform = GameType.ngp.localizedName
+        } else if GameType.ws.localizedShortName == platform {
+            realPlatform = GameType.wsc.localizedName
         }
         return getExtraBool(key: realPlatform + "Visible") ?? true
     }

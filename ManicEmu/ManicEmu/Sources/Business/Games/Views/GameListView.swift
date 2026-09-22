@@ -323,6 +323,7 @@ class GameListView: BaseView {
                             self.selectionMode = .normalMode
                         }
                     }
+                    self.needToStopManufacturerFilter?()
                 }
                 
                 //如果被修改了则更新视图
@@ -468,6 +469,22 @@ class GameListView: BaseView {
             normalDatas[.ngpc] = ngpcGames.count > 0 ? ngpcGames : nil
         }
         
+        // WSC games can switch to the WS subcategory
+        if let wscGames = normalDatas[.wsc], wscGames.count > 0 {
+            var newWscGames = [Game]()
+            var wsGames = [Game]()
+            for wsc in wscGames {
+                let wscGameType = wsc.getExtraInt(key: ExtraKey.gameTypeCategory.rawValue) ?? 0
+                if wscGameType == 0 {
+                    newWscGames.append(wsc)
+                } else if wscGameType == 1 {
+                    wsGames.append(wsc)
+                }
+            }
+            normalDatas[.wsc] = newWscGames.count > 0 ? newWscGames : nil
+            normalDatas[.ws] = wsGames.count > 0 ? wsGames : nil
+        }
+        
         //hide platform
         let allGameTypes = normalDatas.keys
         for gameType in allGameTypes {
@@ -481,6 +498,8 @@ class GameListView: BaseView {
                 platform = GameType.pce.localizedShortName
             } else if gameType == .ngpc {
                 platform = GameType.ngp.localizedShortName
+            } else if gameType == .ws {
+                platform = GameType.wsc.localizedShortName
             }
             visible = Settings.defalut.getPlatformVisible(platform: platform)
             if !visible {
@@ -756,6 +775,11 @@ class GameListView: BaseView {
                 return true
             }
             
+            if gameType == .ws,
+               games.where({ $0.gameType == .wsc }).filter({ ($0.getExtraInt(key: ExtraKey.gameTypeCategory.rawValue) ?? 0) == 1 }).count > 0 {
+                return true
+            }
+            
             if games.count(where: { $0.gameType == gameType }) > 0 {
                 return true
             }
@@ -790,6 +814,19 @@ class GameListView: BaseView {
         return Set<GameOption>([.genHomeMenu, .delete]).contains(item)
     }
     
+    func scrollToLastGame() {
+        guard isGamesExist else { return }
+        let lastSection = collectionView.lastSection
+        let itemCounts = collectionView(collectionView, numberOfItemsInSection: lastSection)
+        if itemCounts > 0 {
+            collectionView.safeScrollToItem(at: IndexPath(row: itemCounts-1, section: lastSection), at: .bottom, animated: true)
+        }
+    }
+    
+    func scrollToFirstGame() {
+        guard isGamesExist else { return }
+        collectionView.safeScrollToItem(at: IndexPath(row: 0, section: 0), at: .top, animated: true)
+    }
 }
 
 extension GameListView: UICollectionViewDataSource {
@@ -803,6 +840,7 @@ extension GameListView: UICollectionViewDataSource {
         predefinedOrder.insert(.turbografx_cd, at: predefinedOrder.firstIndex(of: .turbografx_16)!)
         predefinedOrder.insert(.supergrafx, at: predefinedOrder.firstIndex(of: .turbografx_cd)!)
         predefinedOrder.insert(.ngpc, at: predefinedOrder.firstIndex(of: .ngp)!)
+        predefinedOrder.insert(.ws, at: predefinedOrder.firstIndex(of: .wsc)! + 1)
         let sortedKeys: [GameType] = predefinedOrder.filter { (isSearchMode ? searchDatas : normalDatas).keys.contains($0) }
         return sortedKeys
     }
@@ -894,6 +932,10 @@ extension GameListView: UICollectionViewDataSource {
                     } else if game.gameType == .ngp {
                         if gameTypeCategory == 1 {
                             coverGameType = .ngpc
+                        }
+                    } else if game.gameType == .wsc {
+                        if gameTypeCategory == 1 {
+                            coverGameType = .ws
                         }
                     }
                 }

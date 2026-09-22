@@ -14,6 +14,9 @@ import AudioToolbox.AudioServices
 import ARKit
 import Metal
 import Device
+#if os(iOS)
+import CoreMotion
+#endif
 
 enum PerformanceTier {
     case low    // A10 and below (iPhone 7 / iPad 6th gen, iPhone9,x / iPad7,x)
@@ -263,3 +266,215 @@ extension Device {
     }
 }
 
+#if os(iOS)
+/// iPhone-only. Control Center lock is portrait-only; iPad already locks the current
+/// orientation and must not use this path.
+///
+/// Unlocked: return the app mask and do not touch geometry.
+/// Control Center visible in landscape: omit portrait and prefer lock so a lock tap
+/// cannot snap to portrait.
+/// Lock engaged in landscape: freeze until UIDevice reports landscape again (lock off).
+enum OrientationLockPin {
+    private enum PhysicalAttitude {
+        case landscape
+        case portrait
+        case flat
+        case unknown
+    }
+    
+    private static let motion = CMMotionManager()
+    private static var started = false
+    /// User turned on Control Center lock while the UI was landscape.
+    private static var lockedInLandscape = false
+    /// Scene is inactive (Control Center / switcher) and the UI was landscape.
+    private static var controlCenterOpenInLandscape = false
+    
+    static var isPinned: Bool { lockedInLandscape }
+    static var prefersLocked: Bool { lockedInLandscape || controlCenterOpenInLandscape }
+    
+    static func handleSceneWillResignActive() {
+        beginControlCenterIfLandscape()
+    }
+    
+    static func start() {
+        guard !started else { return }
+        started = true
+        guard shouldHandle else { return }
+        
+        UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+        startAccelerometerIfNeeded()
+        
+        let center = NotificationCenter.default
+        center.addObserver(forName: UIDevice.orientationDidChangeNotification, object: nil, queue: .main) { _ in
+            handleDeviceOrientationNotification()
+        }
+        center.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { _ in
+            beginControlCenterIfLandscape()
+        }
+        center.addObserver(forName: UIScene.willDeactivateNotification, object: nil, queue: .main) { note in
+            guard note.object as? UIWindowScene === ApplicationSceneDelegate.applicationScene else { return }
+            beginControlCenterIfLandscape()
+        }
+        center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
+            startAccelerometerIfNeeded()
+            handleDidBecomeActive()
+        }
+        center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { _ in
+            if motion.isAccelerometerActive {
+                motion.stopAccelerometerUpdates()
+            }
+        }
+        center.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main) { _ in
+            startAccelerometerIfNeeded()
+        }
+    }
+    
+    static func resolvedMask(for window: UIWindow?) -> UIInterfaceOrientationMask {
+        let allowed = AppDelegate.orientation
+        guard shouldHandle else { return allowed }
+        
+        let landscapeAllowed = allowed.intersection(.landscape)
+        guard !landscapeAllowed.isEmpty else {
+            lockedInLandscape = false
+            controlCenterOpenInLandscape = false
+            return allowed
+        }
+        
+        if lockedInLandscape {
+            let current = currentLandscapeMask()
+            return allowed.contains(current) ? current : landscapeAllowed
+        }
+        if controlCenterOpenInLandscape {
+            return landscapeAllowed
+        }
+        return allowed
+    }
+    
+    static func resistPortraitTransitionIfNeeded(to size: CGSize) {
+        guard shouldHandle, lockedInLandscape, size.height > size.width else { return }
+        reassertLockedLandscape()
+    }
+    
+    private static var shouldHandle: Bool {
+        UIDevice.isPhone && !UIDevice.isMac
+    }
+    
+    private static func beginControlCenterIfLandscape() {
+        guard shouldHandle, isAppInterfaceLandscape() else { return }
+        controlCenterOpenInLandscape = true
+        notifyOrientationControllers()
+    }
+    
+    private static func handleDidBecomeActive() {
+        controlCenterOpenInLandscape = false
+        let before = lockedInLandscape
+        if lockedInLandscape {
+            if UIDevice.current.orientation.isLandscape {
+                lockedInLandscape = false
+            }
+        } else if isControlCenterPortraitLockAgainstLandscape() {
+            lockedInLandscape = true
+        }
+        if before != lockedInLandscape {
+            applyLockChange()
+        } else {
+            notifyOrientationControllers()
+        }
+    }
+    
+    private static func handleDeviceOrientationNotification() {
+        guard shouldHandle else { return }
+        let device = UIDevice.current.orientation
+        let before = lockedInLandscape
+        
+        if lockedInLandscape, device.isLandscape {
+            lockedInLandscape = false
+        } else if !lockedInLandscape, isControlCenterPortraitLockAgainstLandscape() {
+            lockedInLandscape = true
+        }
+        
+        if before != lockedInLandscape {
+            applyLockChange()
+        } else if lockedInLandscape, device.isPortrait || device.isFlat {
+            reassertLockedLandscape()
+        }
+    }
+    
+    /// Portrait lock reports portrait while the phone is still held landscape.
+    private static func isControlCenterPortraitLockAgainstLandscape() -> Bool {
+        guard isAppInterfaceLandscape() else { return false }
+        let device = UIDevice.current.orientation
+        guard device.isPortrait || device.isFlat else { return false }
+        return physicalAttitude() != .portrait
+    }
+    
+    private static func applyLockChange() {
+        notifyOrientationControllers()
+        if lockedInLandscape {
+            reassertLockedLandscape()
+        } else {
+            UIViewController.attemptRotationToDeviceOrientation()
+        }
+    }
+    
+    private static func reassertLockedLandscape() {
+        notifyOrientationControllers()
+        let mask = currentLandscapeMask()
+        if #available(iOS 16.0, *) {
+            ApplicationSceneDelegate.applicationScene?.requestGeometryUpdate(
+                UIWindowScene.GeometryPreferences.iOS(interfaceOrientations: mask)
+            )
+        } else {
+            UIDevice.current.setValue(currentInterfaceOrientation().rawValue, forKey: "orientation")
+        }
+    }
+    
+    private static func notifyOrientationControllers() {
+        var vc = ApplicationSceneDelegate.applicationWindow?.rootViewController
+        while let current = vc {
+            if #available(iOS 16.0, *) {
+                current.setNeedsUpdateOfSupportedInterfaceOrientations()
+            }
+            if #available(iOS 26.0, *) {
+                current.setNeedsUpdateOfPrefersInterfaceOrientationLocked()
+            }
+            vc = current.presentedViewController
+        }
+    }
+    
+    private static func startAccelerometerIfNeeded() {
+        guard shouldHandle, motion.isAccelerometerAvailable, !motion.isAccelerometerActive else { return }
+        motion.accelerometerUpdateInterval = 0.2
+        motion.startAccelerometerUpdates()
+    }
+    
+    private static func isAppInterfaceLandscape() -> Bool {
+        currentInterfaceOrientation().isLandscape
+    }
+    
+    private static func currentInterfaceOrientation() -> UIInterfaceOrientation {
+        ApplicationSceneDelegate.applicationScene?.interfaceOrientation
+            ?? ApplicationSceneDelegate.applicationWindow?.windowScene?.interfaceOrientation
+            ?? UIDevice.currentOrientation
+    }
+    
+    private static func currentLandscapeMask() -> UIInterfaceOrientationMask {
+        switch currentInterfaceOrientation() {
+        case .landscapeLeft: return .landscapeLeft
+        case .landscapeRight: return .landscapeRight
+        default: return .landscape
+        }
+    }
+    
+    private static func physicalAttitude() -> PhysicalAttitude {
+        guard let acceleration = motion.accelerometerData?.acceleration else { return .unknown }
+        let ax = abs(acceleration.x)
+        let ay = abs(acceleration.y)
+        let az = abs(acceleration.z)
+        if az > 0.85 && ax < 0.35 && ay < 0.35 {
+            return .flat
+        }
+        return ax > ay ? .landscape : .portrait
+    }
+}
+#endif

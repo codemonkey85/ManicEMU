@@ -55,7 +55,6 @@ enum ExtraKey: String {
     case j2meScreenRotate
     case coreConfigs
     case skinSoundEffects
-    case jitType
     case biosName
     case pretendoConfig
     case identifier
@@ -70,6 +69,7 @@ enum ExtraKey: String {
     case gamehackingBookMark
     case steamGridDBAPIKey
     case landscapeListStyle
+    case landscapeCarouselEnabled
     case landscapeShaderToy
     case landscapeBackgroundMusic
     case landscapeSoundEffects
@@ -86,4 +86,27 @@ enum ExtraKey: String {
     case symbianPackages
     case wiiController
     case dolphinManicInterpreter
+    case autoEnableJITOnLaunch
+    case slowMotionSpeed
+    case iCloudSyncROM
+    case iCloudSyncROMPlatforms
+    /// Restrict ROM transfers to Wi-Fi. Saves and other small data ignore this.
+    case iCloudSyncROMWiFiOnly
+    /// Largest ROM, in bytes, allowed to reach iCloud Drive. 0 means no limit.
+    case iCloudSyncROMSizeLimit
+    case wswanRotation
+    case wswanPalette
+    case arcadeType//naomi=1 atomiswave=2 segasp=3
+    /// Game that launches a third-party emulator via a custom URL scheme.
+    case isUrlGame
+    /// Launch URL for `isUrlGame`. Game.id is an MD5 of this string so CreamAsset filenames stay valid.
+    case urlGameURL
+    /// JSON recipe mapping FLASHSkinButton raw values to FLASHKey (KeyboardEvent.code) values.
+    case skinButtonBinding
+    /// RomM ROM id for a game imported from that service.
+    case rommRomId
+    /// ImportService.id of the RomM instance that imported the game.
+    case rommServiceId
+    /// Play-time milliseconds already pushed to RomM; only the local delta is sent next time.
+    case rommPlayDurationPushed
 }

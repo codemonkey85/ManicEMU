@@ -461,6 +461,30 @@
 		</dict>
 		<dict>
 			<key>CFBundleTypeName</key>
+			<string>WSC Game</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.aoshuang.game.wsc</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Flash Game</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.aoshuang.game.flash</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
 			<string>Manic EMU Controller Skin</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
@@ -601,10 +625,19 @@
 		<string>atariemulator</string>
 		<string>xenios</string>
 		<string>stikjit</string>
+		<string>stikdebug</string>
 		<string>dukex</string>
 		<string>armsx2</string>
 		<string>armsx2-ios</string>
 		<string>armsx2ios</string>
+		<string>delta</string>
+		<string>retroarch</string>
+		<string>ppsspp</string>
+		<string>provenance</string>
+		<string>gamma</string>
+		<string>gba4ios</string>
+		<string>consolesapp</string>
+		<string>melocafe</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
@@ -1469,6 +1502,7 @@
 					<string>iso</string>
 					<string>dol</string>
 					<string>elf</string>
+					<string>m3u</string>
 				</array>
 			</dict>
 		</dict>
@@ -1639,6 +1673,51 @@
 					<string>zip</string>
 					<string>7z</string>
 					<string>rp9</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>WSC Game</string>
+			<key>UTTypeIconFiles</key>
+			<array>
+				<string>file_icon.png</string>
+			</array>
+			<key>UTTypeIdentifier</key>
+			<string>public.aoshuang.game.wsc</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>ws</string>
+					<string>wsc</string>
+					<string>pc2</string>
+					<string>pcv2</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Flash Game</string>
+			<key>UTTypeIconFiles</key>
+			<array>
+				<string>file_icon.png</string>
+			</array>
+			<key>UTTypeIdentifier</key>
+			<string>public.aoshuang.game.flash</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>swf</string>
 				</array>
 			</dict>
 		</dict>

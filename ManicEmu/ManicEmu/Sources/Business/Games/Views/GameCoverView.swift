@@ -287,6 +287,8 @@ class GameCoverView: BaseView {
                 image = style == .style2 ? R.image.xbox360_cover_v() : R.image.xbox360_cover_h()
             } else if gameType == .j2me {
                 image = style == .style2 ? R.image.j2me_cover_v() : R.image.j2me_cover_h()
+            } else if gameType == .flash {
+                image = style == .style2 ? R.image.flash_cover_v() : R.image.flash_cover_h()
             } else if gameType == .doom {
                 image = style == .style2 ? R.image.doom_cover_v() : R.image.doom_cover_h()
             } else if gameType == .dos {
@@ -297,7 +299,7 @@ class GameCoverView: BaseView {
                 } else if gameTypeCategory == 2 {
                     image = style == .style2 ? R.image.win98_cover_v() : R.image.win98_cover_h()
                 }   
-            } else if gameType == .xbox360 {
+            } else if gameType == .xbox {
                 image = style == .style2 ? R.image.xbox_cover_v() : R.image.xbox_cover_h()
             } else if gameType == .symbian {
                 image = style == .style2 ? R.image.symbian_cover_v() : R.image.symbian_cover_h()
@@ -321,6 +323,14 @@ class GameCoverView: BaseView {
                 } else if gameTypeCategory == 1 {
                     image = style == .style2 ? R.image.ngp_color_cover_v() : R.image.ngp_color_cover_h()
                 }
+            } else if gameType == .wsc {
+                if gameTypeCategory == 0 {
+                    image = style == .style2 ? R.image.wsc_cover_v() : R.image.wsc_cover_h()
+                } else if gameTypeCategory == 1 {
+                    image = style == .style2 ? R.image.ws_cover_v() : R.image.ws_cover_h()
+                }
+            } else if gameType == .ws {
+                image = style == .style2 ? R.image.ws_cover_v() : R.image.ws_cover_h()
             } else if gameType == .c64 {
                 image = style == .style2 ? R.image.c64_cover_v() : R.image.c64_cover_h()
             } else if gameType == .amiga {

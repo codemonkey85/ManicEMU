@@ -396,6 +396,37 @@ extension GameOption {
                 return .None
             }
         }
+        
+        //For WS
+        static var AllPaletteTitleForWS: [String] {
+            ["default",
+             "wonderswan",
+             "wondeswan_color",
+             "swancrystal",
+             "gb_dmg",
+             "gb_pocket",
+             "gb_light",
+             "blossom_pink",
+             "bubbles_blue",
+             "buttercup_green",
+             "digivice",
+             "game_com",
+             "gameking",
+             "game_master",
+             "golden_wild",
+             "greenscale",
+             "hokage_orange",
+             "labo_fawn",
+             "legendary_super_saiyan",
+             "microvision",
+             "million_live_gold",
+             "odyssey_gold",
+             "shiny_sky_blue",
+             "slime_blue",
+             "ti_83",
+             "travel_wood",
+             "virtual_boy"]
+        }
     }
     
     enum AirPlayScaling: Int, CaseIterable {
@@ -479,6 +510,43 @@ extension GameOption {
                 return type
             } else {
                 return .stretch
+            }
+        }
+    }
+    
+    enum SlowMotionSpeed: Int, CaseIterable  {
+        case off, one, two, three, four, five
+        
+        var title: String {
+            if self == .off {
+                return R.string.localizable.gameSettingFastForwardResume()
+            } else {
+                return R.string.localizable.slowMotionRatio(" x\(self.rawValue)")
+            }
+        }
+        
+        var next: SlowMotionSpeed {
+            if let speed = SlowMotionSpeed(rawValue: self.rawValue + 1) {
+                return speed
+            } else {
+                return .off
+            }
+        }
+
+        var ratio: Float {
+            switch self {
+            case .off:
+                return 1.0
+            case .one:
+                return 1.2
+            case .two:
+                return 1.5
+            case .three:
+                return 3
+            case .four:
+                return 5.0
+            case .five:
+                return 10.0
             }
         }
     }

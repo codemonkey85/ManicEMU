@@ -10,7 +10,38 @@
 struct SettingItem {
     
     enum ItemType: String {
-        case appearance, theme, quickGame, autoSaveState, skin, airPlay, iCloud, fullScreenWhenConnectController, bios, respectSilentMode, onlinePlay, rumble, skinSound, retro, triggerPro, jit, shaders, globalCoreSwitch, FAQ, feedback, qq, telegram, discord, about, shareApp, clearCache, language, userAgreement, privacyPolicy, featuredItems, coverScraping
+        case appearance,
+             theme,
+             quickGame,
+             autoSaveState,
+             skin,
+             airPlay,
+             iCloud,
+             fullScreenWhenConnectController,
+             bios,
+             respectSilentMode,
+             onlinePlay,
+             rumble,
+             skinSound,
+             retro,
+             triggerPro,
+             jit,
+             shaders,
+             globalCoreSwitch,
+             FAQ,
+             feedback,
+             qq,
+             telegram,
+             discord,
+             about,
+             shareApp,
+             clearCache,
+             language,
+             userAgreement,
+             privacyPolicy,
+             featuredItems,
+             coverScraping,
+             resetTips
     }
     
     var type: ItemType
@@ -20,7 +51,7 @@ struct SettingItem {
         var enablePressEffect = false
         //icon
         styles.append(.icon(icon,
-                            iconSize: R.Size.ButtonExtraExtraSmall))
+                            iconSize: .fixSize(CGSize(R.Size.ButtonExtraExtraSmall))))
         //title
         styles.append(.title(.largeText(title)))
         //detail
@@ -101,7 +132,7 @@ struct SettingItem {
             [R.Color.Purple]
         case .theme, .onlinePlay, .FAQ, .featuredItems:
             [R.Color.Orange]
-        case .autoSaveState, .rumble, .feedback:
+        case .autoSaveState, .rumble, .feedback, .resetTips:
             [R.Color.Green]
         case .skin, .skinSound, .about:
             [R.Color.Pink]
@@ -182,6 +213,8 @@ struct SettingItem {
             ASIcon.symbolImage(R.image.core_iconSymbols(), colors: iconColors)
         case .coverScraping:
             ASIcon.symbolImage(R.image.cover_iconSymbols(), colors: iconColors)
+        case .resetTips:
+            ASIcon.symbol(.textBubble, colors: iconColors)
         }
     }
     
@@ -249,6 +282,8 @@ struct SettingItem {
             R.string.localizable.globalCoreSwitch()
         case .coverScraping:
             R.string.localizable.coverScraping()
+        case .resetTips:
+            R.string.localizable.resetTips()
         }
     }
     
@@ -271,6 +306,30 @@ struct SettingItem {
             return Settings.appearance.desc
         } else if type == .triggerPro {
             return R.string.localizable.triggerProDesc()
+        } else if type == .iCloud {
+#if SIDE_LOAD
+            return R.string.localizable.iCloudNotEnable()
+#else
+            if !Settings.defalut.iCloudSyncEnable {
+                return R.string.localizable.iCloudNotEnable()
+            }
+            let progress = FilesSyncManager.shared.progress
+            switch progress.phase {
+            case .idle:
+                return R.string.localizable.iCloudSynced()
+            case .paused:
+                return R.string.localizable.iCloudSyncPaused()
+            case .unavailable:
+                return R.string.localizable.iCloudNotEnable()
+            case .scanning, .syncing:
+                if progress.totalCount > 0 {
+                    return R.string.localizable.iCloudSyncing() + " " + R.string.localizable.iCloudSyncProgressFormat(progress.completedCount, progress.totalCount)
+                }
+                return R.string.localizable.iCloudSyncing()
+            }
+#endif
+        } else if type == .resetTips {
+            return R.string.localizable.resetTipsDesc()
         }
         return nil
     }

@@ -11,6 +11,7 @@
 import Fuse
 import SwiftSoup
 import CryptoKit
+import IceCream
 
 class OnlineCoverManager {
     struct CoverMatch {
@@ -18,12 +19,16 @@ class OnlineCoverManager {
         var gameID: String
         var gameName: String
         var fileExtension: String
+        var isNaomi: Bool = false
+        var isAtomiswave: Bool = false
         
         init(game: Game) {
             self.gameType = game.effectiveGameType
             self.gameID = game.id
             self.gameName = game.translatedName ?? game.displayName
             self.fileExtension = game.fileExtension
+            self.isNaomi = game.isNaomiGame
+            self.isAtomiswave = game.isAtomiswaveGame
         }
         
         init(gameType: GameType, gameID: String, gameName: String, fileExtension: String) {
@@ -116,7 +121,13 @@ class OnlineCoverManager {
             case .dc:
                 boxArtUrl = host.appendingPathComponent("Sega - Dreamcast/Named_Boxarts")
             case .arcade:
-                boxArtUrl = host.appendingPathComponent("MAME/Named_Boxarts")
+                if coverMatch.isNaomi {
+                    boxArtUrl = host.appendingPathComponent("Sega - Naomi/Named_Boxarts")
+                } else if coverMatch.isAtomiswave {
+                    boxArtUrl = host.appendingPathComponent("Atomiswave/Named_Boxarts")
+                } else {
+                    boxArtUrl = host.appendingPathComponent("MAME/Named_Boxarts")
+                }
             case .a2600:
                 boxArtUrl = host.appendingPathComponent("Atari - 2600/Named_Boxarts")
             case .a5200:
@@ -129,6 +140,16 @@ class OnlineCoverManager {
                 boxArtUrl = host.appendingPathComponent("Atari - Lynx/Named_Boxarts")
             case .xbox360:
                 boxArtUrl = host.appendingPathComponent("Microsoft - Xbox 360/Named_Boxarts")
+            case .flash:
+                if storeCoverFromSWF(gameID: coverMatch.gameID) {
+                    completion?([], false)
+                    return
+                }
+                searchCoversFromMoby(coverMatch: coverMatch,
+                                     persistentedTranslation: persistentedTranslation,
+                                     isCallBackMain: isCallBackMain,
+                                     completion: completion)
+                return
             case .ns, .j2me, .symbian:
                 searchCoversFromMoby(coverMatch: coverMatch,
                                      persistentedTranslation: persistentedTranslation,
@@ -157,6 +178,10 @@ class OnlineCoverManager {
                 boxArtUrl = host.appendingPathComponent("SNK - Neo Geo Pocket/Named_Boxarts")
             case .ngpc:
                 boxArtUrl = host.appendingPathComponent("SNK - Neo Geo Pocket Color/Named_Boxarts")
+            case .wsc:
+                boxArtUrl = host.appendingPathComponent("Bandai - WonderSwan Color/Named_Boxarts")
+            case .ws:
+                boxArtUrl = host.appendingPathComponent("Bandai - WonderSwan/Named_Boxarts")
             case .c64:
                 boxArtUrl = host.appendingPathComponent("Commodore - 64/Named_Boxarts")
             case .amiga:
@@ -226,6 +251,25 @@ class OnlineCoverManager {
                         completion?(onlineCoverUrls, matchList.count == 0)
                     }
                 }
+            }
+        }
+
+        /// Use an embedded SWF bitmap when Libretro/Moby have no Flash box art.
+        static func storeCoverFromSWF(gameID: String) -> Bool {
+            let realm = Database.realm
+            guard let game = realm.object(ofType: Game.self, forPrimaryKey: gameID),
+                  !game.isDeleted else { return false }
+            if game.gameCover != nil { return true }
+            guard FileManager.default.fileExists(atPath: game.romUrl.path),
+                  let coverData = FLASHCover.extractJPEGData(from: game.romUrl) else { return false }
+            do {
+                try realm.write {
+                    game.gameCover = CreamAsset.create(objectID: game.id, propName: "gameCover", data: coverData)
+                }
+                return true
+            } catch {
+                Log.debug("[FLASHCover] Failed to store SWF cover: \(error)")
+                return false
             }
         }
         
@@ -357,7 +401,16 @@ class OnlineCoverManager {
                 request.addValue("Bearer \(R.Cipher.DeepSeek)", forHTTPHeaderField: "Authorization")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
                 request.addValue("application/json", forHTTPHeaderField: "Accept")
-                request.httpBody = ["frequency_penalty": 0.7, "max_tokens": 2048, "model": "deepseek-v4-flash", "presence_penalty": 0.7, "stream" : false, "temperature" : 1.3, "top_p" : 0.9, "response_format" : ["type": "json_object"], "messages": [["content": "\(content)", "role":"user"]]].jsonData()
+                // Flash thinks by default; disable it so a short JSON title does not burn reasoning tokens.
+                request.httpBody = [
+                    "model": "deepseek-flash",
+                    "max_tokens": 128,
+                    "stream": false,
+                    "temperature": 1.3,
+                    "thinking": ["type": "disabled"],
+                    "response_format": ["type": "json_object"],
+                    "messages": [["content": content, "role": "user"]]
+                ].jsonData()
                 let task = URLSession.shared.dataTask(with: request) { data, response, error in
                     if let _ = error {
                         completion?(name)

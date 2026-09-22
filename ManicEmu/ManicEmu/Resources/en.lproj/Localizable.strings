@@ -20,7 +20,6 @@
 "ImportDownloadError" = "Download Error\n%@";
 "ImportDownloadContinue" = "Resuming Download...\n%@";
 "LandServiceEditServerName" = "Server Title";
-"LandServiceEditServerNamePlaceholder" = "My SMB Server";
 "LandServiceEditHost" = "Server Address";
 "LandServiceEditUserName" = "Username";
 "LandServiceEditPassword" = "Password";
@@ -496,12 +495,9 @@ Press the controller button to complete mapping...";
 
 "ImportMissingFile" = "Failed to import %@: Missing file %@";
 "MultiDiscBuilder" = "MultiDisc Helper";
-"MultiDiscBuilderDesc" = "The MultiDisc Helper creates disc-swappable .m3u files for multi-disc games (.cue(.bin) .cdi or .chd). Skip this if you already have an .m3u file – import it directly via Game Import.";
 "M3uFileShare" = "Share .m3u File";
 "M3uFileImport" = "Add to Library";
 "MultiDiscAddFile" = "Add %@ File";
-"MultiDiscImportErrorConflict" = "Error: Cannot mix .cue .cdi and .chd files";
-"MultiDiscImportErrorMissing" = "Error: No .cue .cdi or .chd files found";
 "GenerateM3uFailed" = "Failed to generate .m3u file";
 "MultiDiscCloseAlert" = ".m3u file generated. Close this page after importing it to your library.";
 "MultiDiscContinueClose" = "Continue Closing";
@@ -836,8 +832,6 @@ Press the controller button to complete mapping...";
 "GenerateHomeMenu" = "Create Home Menu";
 "SkinSoundEffects" = "Skin Sound Effects";
 
-"JITType" = "JIT Type";
-"JITTypeDesc" = "Standard JIT offers the best performance, while IR JIT provides moderate performance.";
 "Pretendo" = "Pretendo Network";
 "BadIpAddress" = "Invalid IP address. Please try again.";
 "ArticBaseSettings" = "Artic Base Settings";
@@ -861,6 +855,7 @@ Press the controller button to complete mapping...";
 "AllCoreSwitch" = "Apply to Existing Games";
 "AllCoreSwitchDesc" = "Set all imported %@ games to use the %@ core.";
 "EnableJIT" = "Enable JIT";
+"EnableJITSuccess" = "JIT enabled successfully";
 "ReEnableJIT" = "Re-enable JIT";
 "HidePlatform" = "Hide %@";
 "ShowPlatform" = "Show %@";
@@ -1044,7 +1039,6 @@ Press the controller button to complete mapping...";
 "BIOSCommondDesc" = "Some specific games may not run properly without a BIOS.";
 "WiiKeysBinDesc" = "BootMii format keys.bin is required to play Wii games.";
 "WiimoteSideways" = "Wiimote Sideways";
-"WiimoteDesc" = "In the default skin, Wiimote mappings:\n「X」 -> 「1」\n「Y」 -> 「2」\n「ZL」 -> 「Shake」\n「Right Thumbstick」 -> 「Tilt」";
 "DolphinCoreWraning" = "Due to the current JITless performance limits of the dolphin core, the device may heat up and stutter with frame drops during game emulation, but there are plenty of heroes working hard behind the scenes to optimize things. Everything will gradually get better, right?";
 "DolphinSaveTips" = "Please use the Files app to open: Manic EMU - dolphin-emu - User to manage your save files on your own.";
 
@@ -1088,3 +1082,119 @@ Press the controller button to complete mapping...";
 
 "CPUEmulationMethod" = "CPU Emulation Method";
 "DolphinCPUDesc" = "When JIT is unavailable, the core runs in interpreter mode.\nCached Interpreter: the official interpreter. It is more accurate, but more demanding on performance.\nManic Interpreter: Manic EMU's interpreter. Aggressive optimizations make it faster, but it may also produce more errors.";
+
+"JitMethod" = "JIT Method";
+"JitMethodExternalDebugger" = "External Debugger";
+"JitMethodBuiltInDebugger" = "Built-in Debugger";
+"JitActiveDebugger" = "Active Debugger";
+"JitDebuggerNotAttached" = "Not Attached";
+"JitExternalDebuggerAttached" = "An external debugger is already attached. Quit the external debugger first, then try the built-in debugger again.";
+"JitMethodExternalInfo" = "Opens StikDebug to attach to this app. StikDebug then relaunches Manic EMU with JIT enabled.";
+"JitMethodBuiltInInfo" = "Using the built-in debugger:\n1. Generate a remote pairing file with idevice_pair (lockdown files will fail) and import it.\n2. (Optional) On iOS 26.0 or later and iPhone 12 (A14) or newer, you also need LocalDevVPN for the debug network. Connect LocalDevVPN, then join a nearby Wi-Fi, or use Cellular → VPN → Airplane Mode.\n3. Enable JIT.\n\nTo reset the connection: create a new remote pairing file and import it again. If it still fails, restart the device.";
+"JitPairingNotImported" = "Not Imported";
+"JitImportPairingFile" = "Import Pairing File";
+"JitPrepare" = "Prepare JIT";
+"JitPrepareSuccess" = "JIT prepared successfully";
+"JitPrepareNotChecked" = "Not Checked";
+"JitTxmStatus" = "TXM / SPTM";
+"JitTxmPresent" = "TXM Present";
+"JitTxmNotPresent" = "SPTM / PPL";
+"JitTxmUnknown" = "Unknown";
+"JitPath" = "JIT Path";
+"JitPathLegacy" = "Legacy JIT";
+"JitPathPPL" = "PPL";
+"JitPathTXM" = "TXM";
+"JitResetDDI" = "Reset DDI Cache";
+"JitResetDDISuccess" = "DDI cache reset successfully";
+"JitRequiresiOS174" = "Built-in StikJIT requires iOS 17.4 or later.";
+"JitLiveContainerUnavailable" = "Built-in StikJIT is unavailable in LiveContainer.";
+"JitGetTaskAllowMissing" = "This build is missing get-task-allow, so a debugger cannot attach.";
+"JitPairingRequired" = "Import a pairing file to use built-in StikJIT.";
+"JitPrepareReady" = "Ready";
+"JitPrepareUnreachable" = "Unreachable";
+"JitPrepareNotReady" = "Not Ready";
+"JitAcquireTimeout" = "Timed out waiting for JIT. The game will start with the interpreter, or you can try again.";
+"JitAutoEnableOnLaunch" = "Enable JIT on Launch";
+"JitAutoEnableOnLaunchDesc" = "Make sure the debug environment is ready before launching the app.";
+"JitSupportedDesc" = "Cores that support JIT: %@";
+
+"SlowMotion" = "Slow Motion";
+"SlowMotionRatio" = "Slow Motion %@";
+"SlowMotionSpeedLimit" = "Maximum speed limited to 2x! Upgrade to Premium for 5x slow motion";
+"SlowMotionDesc" = "Slow motion has lower priority than fast forward. If fast forward is enabled, slow motion turns off automatically.";
+
+"ICloudROMSyncSetting" = "ROM Sync Settings";
+"ICloudROMSyncDesc" = "ROM sync is on by default. Turning it off stops future uploads. You can choose whether to remove existing copies from iCloud Drive. Local files stay on this device.";
+"ICloudROMPlatformConfig" = "Platform Settings";
+"ICloudROMGameConfig" = "Game Settings";
+"ICloudROMRemoveDriveTitle" = "Remove from iCloud Drive?";
+"ICloudROMRemoveDriveDetail" = "This only deletes the iCloud Drive copy to free space. The ROM stays on this device. Other devices that already downloaded it keep their local copies.";
+"ICloudROMRemoveDriveConfirm" = "Remove from iCloud Drive";
+"ICloudROMKeepDrive" = "Keep iCloud Copy";
+"ICloudSyncPaused" = "iCloud Sync Paused";
+"ICloudSyncProgressFormat" = "%d/%d";
+"ICloudRepairSync" = "Repair Sync";
+"ICloudRepairSyncDesc" = "Compares local files with iCloud Drive and retries uploads or downloads that failed or were missed. Progress appears above. Use this if a ROM did not appear in iCloud after import, or after the device was offline.";
+"ICloudRepairSyncInProgress" = "Repair is already in progress.";
+"ICloudRepairSyncNotReady" = "iCloud sync is still starting. Try again in a moment.";
+"ICloudRepairSyncAlreadyDone" = "Local files and iCloud Drive already match.";
+"ICloudRepairSyncResult" = "Repair finished. Uploaded %d, downloaded %d.";
+"ICloudRepairSyncResultPending" = "Repair finished. Uploaded %d, downloaded %d. %d files will retry later.";
+"ICloudROMStillSyncing" = "This ROM is still downloading from iCloud. Try again in a moment.";
+"ICloudROMWiFiOnly" = "Sync ROMs on Wi-Fi Only";
+"ICloudROMSizeLimit" = "ROM Size Limit";
+"ICloudROMSizeLimitUnlimited" = "No Limit";
+"ICloudROMSizeLimitDesc" = "ROMs larger than this are kept on this device only, so a single large disc image does not fill up iCloud Drive. Saves, save states, skins, and settings are never affected.";
+"ICloudROMTransferLimitDesc" = "These two limits apply to ROM files only. Saves, save states, skins, and settings keep syncing over any network and at any size. Opening a game always downloads its ROM, even when a limit would otherwise keep it from syncing.";
+
+"WSwanRotateDisplay" = "Rotate Display";
+"NDSLidToggle" = "Toggle Lid";
+"ResetTips" = "Reset Tips";
+"ResetTipsDesc" = "Show previously dismissed alerts and tips again";
+"ResetTipsSuccess" = "Tips reset successfully";
+
+"EnableCarouselStyle" = "Enable Carousel Style";
+
+"AddGameLink" = "Add Game Link";
+"FetchGamesFromOtherEmulators" = "Import from Other Emulators";
+"AddUrlGameName" = "Game Name";
+"AddUrlGameNamePlaceholder" = "Enter a name";
+"AddUrlGameUrl" = "URL Scheme";
+"AddUrlGamePlatform" = "Platform";
+"AddUrlGameAdd" = "Add";
+"AddUrlGameInvalidUrl" = "Please enter a valid URL scheme, such as delta://game/...";
+"AddUrlGameUnsupportedScheme" = "This URL scheme is not supported.";
+"AddUrlGameAlreadyExists" = "This game link already exists.";
+"AddUrlGameSuccess" = "Game link added";
+"EditLink" = "Edit Link";
+"AddUrlGameUpdated" = "Game link saved";
+"AddGameLinkDesc" = "Supported emulators: %@";
+
+"MultiDiscBuilderDesc" = "The MultiDisc Helper creates .m3u files for multi-disc games so you can swap discs during play. Add disc images of the same type, such as .cue(.bin), .gdi, .chd, .cdi, .iso, .rvz, or .d64. If you already have an .m3u file, skip this and import it directly.";
+"MultiDiscSupportedFormats" = "Supported formats: %@";
+"MultiDiscImportErrorConflict" = "Error: Cannot mix different disc image formats.";
+"MultiDiscImportErrorMissing" = "Error: No supported disc image found.";
+
+"SkinButtonBinding" = "Skin Button Binding";
+"SkinButtonBindingDesc" = "Bind skin buttons to keyboard keys.";
+
+"RommPasswordOrApiKey" = "Password or API Key";
+"RommPullFromService" = "Pull Data from RomM";
+"RommPushToService" = "Push Changes to RomM";
+"RommPullConfirmDetail" = "This will overwrite local covers, metadata, play time, game saves, and matching save states for %d linked games. Continue?";
+"RommPushConfirmDetail" = "This will overwrite RomM covers, summaries, game saves, and save states for %d linked games, and append play time. Continue?";
+"RommNoLinkedGames" = "No games imported from this RomM service.";
+"RommTransferSuccess" = "Finished. %d games updated.";
+"RommTransferPartial" = "Finished. %d succeeded, %d failed.";
+"RommTransferFailed" = "Transfer failed. Check the server connection.";
+"RommLanAddressOnly" = "RomM currently accepts LAN IP addresses only (such as 192.168.x.x, 10.x.x.x, or 169.254.x.x). Hostnames and public IPs are not supported yet.";
+"LandServiceEditServerNamePlaceholder" = "My Server";
+
+"WiimoteMotionPlusSideways" = "Wiimote+MotionPlus Sideways";
+"WiimoteDesc" = "In the default skin, Wiimote mappings:\n「X」 -> 「1」\n「Y」 -> 「2」\n「ZL」 -> 「Shake」\n「Right Thumbstick」 -> 「Tilt」\nGames that require MotionPlus (such as Skyward Sword) need a Wiimote+MotionPlus controller type.";
+
+"NextTap" = "Next Tab";
+"PreviousTap" = "Previous Tab";
+"ScrollToLastGame" = "Scroll to Last Game";
+"ScrollToFirstGame" = "Scroll to First Game";
+"WhatsNew" = "What’s New in v%@";

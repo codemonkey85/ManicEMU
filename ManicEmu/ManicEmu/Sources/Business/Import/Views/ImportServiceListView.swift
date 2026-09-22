@@ -31,27 +31,26 @@ class ImportServiceListView: BaseView {
                 ASWebView.show(url: R.URLs.GameImportGuide)
             } else if index == 2 {
                 //More
-                ChevronSheetView.show(stringOptions: [
-                    R.string.localizable.fetchGamesFromMeloNX(),
-                    R.string.localizable.fetchGamesFromXeniOS(),
-                    R.string.localizable.fetchGamesFromDukeX(),
-                    R.string.localizable.fetchGamesFromARMSX2(),
-                ], completion: { [weak self] index in
-                    guard let self else { return }
-                    if let index {
-                        var type: EmulatorInteractionKit.EmulatorType? = nil
-                        if index == 0 {
-                            type = .meloNX
-                        } else if index == 1 {
-                            type = .xeniOS
-                        } else if index == 2 {
-                            type = .dukeX
-                        } else if index == 3 {
-                            type = .armsx2
-                        }
-                        if let type {
-                            EmulatorInteractionKit.fetchGames(type: type)
-                        }
+                ChevronSheetView.show(sections: [
+                    (header: R.string.localizable.addGameLink(),
+                     cells: [.iconTitleChevronCell(icon: .symbolImage(R.image.link_iconSymbols()),
+                                                   title: R.string.localizable.addGameLink())]),
+                    (header: R.string.localizable.fetchGamesFromOtherEmulators(),
+                     cells: [
+                        .iconTitleChevronCell(title: R.string.localizable.fetchGamesFromMeloNX()),
+                        .iconTitleChevronCell(title: R.string.localizable.fetchGamesFromXeniOS()),
+                        .iconTitleChevronCell(title: R.string.localizable.fetchGamesFromDukeX()),
+                        .iconTitleChevronCell(title: R.string.localizable.fetchGamesFromARMSX2())
+                     ])
+                ], completion: { indexPath in
+                    guard let indexPath else { return }
+                    if indexPath.section == 0 {
+                        AddUrlGameView.show()
+                        return
+                    }
+                    let types: [EmulatorInteractionKit.EmulatorType] = [.meloNX, .xeniOS, .dukeX, .armsx2]
+                    if types.indices.contains(indexPath.row) {
+                        EmulatorInteractionKit.fetchGames(type: types[indexPath.row])
                     }
                 })
             }
@@ -80,6 +79,9 @@ class ImportServiceListView: BaseView {
     private let fileService = ImportService.genService(type: .files, detail: R.string.localizable.importServiceListFilesDetail())
     
     private var serviceUpdateToken: NotificationToken? = nil
+    /// Context-menu API shows a custom sheet and returns nil, so UIKit would otherwise treat the long-press as a tap.
+    private var suppressSelectionFromLongPress = false
+    private var isPresentingServiceLongPressMenu = false
     private var services: [ImportService] = {
         var services: [ImportService] = []
         //默认添加wifi、粘贴板、多碟助手、RomPatcher
@@ -292,7 +294,19 @@ extension ImportServiceListView: UICollectionViewDataSource {
 }
 
 extension ImportServiceListView: UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
+        if suppressSelectionFromLongPress {
+            suppressSelectionFromLongPress = false
+            return false
+        }
+        return true
+    }
+    
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        if suppressSelectionFromLongPress {
+            suppressSelectionFromLongPress = false
+            return
+        }
         if indexPath.section == 0, indexPath.row == 1 {
             //files
             FilesImporter.shared.presentImportController()
@@ -328,7 +342,7 @@ extension ImportServiceListView: UICollectionViewDelegate {
                 }
             }
             
-        case .samba, .webdav:
+        case .samba, .webdav, .romm:
             
             if !PurchaseManager.isMember {
                 topViewController()?.present(PurchaseViewController(featuresType: .import), animated: true)
@@ -370,20 +384,93 @@ extension ImportServiceListView: UICollectionViewDelegate {
         let service = services[indexPath.row]
         guard service.type != .wifi && service.type != .paste && service.type != .multiDisc && service.type != .romPatcher else { return nil }
         
-        ChevronSheetView.show(cellOptions: [.iconTitleChevronCell(icon: .symbolImage(R.image.delete_iconSymbols(), colors: [R.Color.Red]),
-                                                                  title: R.string.localizable.importServiceDelete(),
-                                                                  titleColor: R.Color.Red)],
-                              completion: { index in
-            if let _ = index {
-                ImportService.change { realm in
-                    if Settings.defalut.iCloudSyncEnable {
-                        service.isDeleted = true
+        suppressSelectionFromLongPress = true
+        if !isPresentingServiceLongPressMenu {
+            isPresentingServiceLongPressMenu = true
+            presentServiceLongPressMenu(service)
+            DispatchQueue.main.async { [weak self] in
+                self?.isPresentingServiceLongPressMenu = false
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            self?.suppressSelectionFromLongPress = false
+        }
+        return nil
+    }
+    
+    private func presentServiceLongPressMenu(_ service: ImportService) {
+        if service.type == .romm {
+            ChevronSheetView.show(cellOptions: [
+                .iconTitleChevronCell(icon: .symbol(.arrowDown),
+                                      title: R.string.localizable.rommPullFromService()),
+                .iconTitleChevronCell(icon: .symbol(.arrowUp),
+                                      title: R.string.localizable.rommPushToService()),
+                .iconTitleChevronCell(icon: .symbolImage(R.image.delete_iconSymbols(), colors: [R.Color.Red]),
+                                      title: R.string.localizable.importServiceDelete(),
+                                      titleColor: R.Color.Red)
+            ], completion: { [weak self] index in
+                guard let self, let index else { return }
+                switch index {
+                case 0:
+                    self.confirmRommTransfer(service: service, pull: true)
+                case 1:
+                    self.confirmRommTransfer(service: service, pull: false)
+                case 2:
+                    self.deleteImportService(service)
+                default:
+                    break
+                }
+            })
+        } else {
+            ChevronSheetView.show(cellOptions: [.iconTitleChevronCell(icon: .symbolImage(R.image.delete_iconSymbols(), colors: [R.Color.Red]),
+                                                                      title: R.string.localizable.importServiceDelete(),
+                                                                      titleColor: R.Color.Red)],
+                                  completion: { [weak self] index in
+                if index != nil {
+                    self?.deleteImportService(service)
+                }
+            })
+        }
+    }
+    
+    private func deleteImportService(_ service: ImportService) {
+        ImportService.change { realm in
+            if Settings.defalut.iCloudSyncEnable {
+                service.isDeleted = true
+            } else {
+                realm.delete(service)
+            }
+        }
+    }
+    
+    private func confirmRommTransfer(service: ImportService, pull: Bool) {
+        let count = RommLibrary.shared.linkedGameCount(service: service)
+        guard count > 0 else {
+            UIView.makeToast(message: R.string.localizable.rommNoLinkedGames())
+            return
+        }
+        let detail = pull
+            ? R.string.localizable.rommPullConfirmDetail(count)
+            : R.string.localizable.rommPushConfirmDetail(count)
+        UIView.makeAlert(detail: detail,
+                         confirmTitle: R.string.localizable.confirmTitle(),
+                         confirmAction: {
+            Task {
+                await MainActor.run { UIView.makeLoading() }
+                let summary = pull
+                    ? await RommLibrary.shared.pull(service: service)
+                    : await RommLibrary.shared.push(service: service)
+                await MainActor.run {
+                    UIView.hideLoading()
+                    if summary.succeeded == 0 && summary.failed > 0 {
+                        UIView.makeToast(message: R.string.localizable.rommTransferFailed())
+                    } else if summary.failed == 0 {
+                        UIView.makeToast(message: R.string.localizable.rommTransferSuccess(summary.succeeded))
                     } else {
-                        realm.delete(service)
+                        UIView.makeToast(message: R.string.localizable.rommTransferPartial(summary.succeeded, summary.failed))
                     }
                 }
             }
         })
-        return nil
     }
 }

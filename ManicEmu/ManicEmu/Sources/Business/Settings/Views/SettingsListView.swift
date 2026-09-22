@@ -111,6 +111,7 @@ class SettingsListView: BaseView {
                 datas[section] = [.init(type: .about),
                                   .init(type: .shareApp),
                                   .init(type: .clearCache),
+                                  .init(type: .resetTips),
                                   .init(type: .language),
                                   .init(type: .userAgreement),
                                   .init(type: .privacyPolicy),
@@ -332,6 +333,12 @@ class SettingsListView: BaseView {
                                 UIView.hideLoading()
                             }
                             
+                        case .resetTips:
+                            R.DefaultKey.TipsDefaultKeys.forEach({
+                                UserDefaults.standard.set(false, forKey: $0)
+                            })
+                            UIView.makeToast(message: R.string.localizable.resetTipsSuccess())
+                            
                         case .language:
                             if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
                                 UIApplication.shared.open(settingsUrl)
@@ -373,11 +380,13 @@ class SettingsListView: BaseView {
                             }
                             
                         case .iCloud:
+#if !SIDE_LOAD
                             if UIDevice.isPad {
                                 didTapDetailView?(ICloudSettingView(showClose: false))
                             } else {
                                 ICloudSettingView.show()
                             }
+#endif
                             
                         case .jit:
                             if UIDevice.isPad {

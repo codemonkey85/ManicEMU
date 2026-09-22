@@ -14,7 +14,7 @@ import ZIPFoundation
 struct Database {
     /// Independent of marketing version. Bump only when Realm object schema changes; never decrease.
     /// Existing 2.0.0 databases already store this as 200 (`"2.0.0"` with dots stripped).
-    private static let schemaVersion: UInt64 = 200
+    private static let schemaVersion: UInt64 = 201
     
     static func setup(completion: (()->Void)? = nil) {
         do {
@@ -356,6 +356,14 @@ struct Database {
                         config.setUsingCoreName(gameType: ._3ds, coreName: EmulationCore.Azahar.name)
                     }
                 }
+                
+                if systemCoreVersionNumber < 201 {
+                    //By default, Dolphin's language is English.
+                    let games = realm.objects(Game.self).where({ $0.gameType == .wii || $0.gameType == .ngc })
+                    try? realm.write({
+                        games.forEach({ $0.region = 1 })
+                    })
+                }
             }
             
             // After data migrations so Game.portraitSkin still points at live Skin objects.
@@ -423,8 +431,8 @@ struct Database {
         // Additive changes (new types/optional properties) apply automatically when this
         // version increases. Put property renames or destructive transforms inside.
         config.migrationBlock = { _, oldSchemaVersion in
-            if oldSchemaVersion < 200 {
-                // Prefference is a new type; Realm creates its table automatically.
+            if oldSchemaVersion < 201 {
+                // FilesSyncRecord is a new type; Realm creates its table automatically.
             }
         }
         return config

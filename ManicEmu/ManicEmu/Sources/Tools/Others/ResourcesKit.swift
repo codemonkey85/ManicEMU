@@ -54,12 +54,12 @@ struct ResourcesKit {
             if !FileManager.default.fileExists(atPath: R.Path.ThreeDS.appendingPathComponent("sdmc")) {
                 if FileManager.default.fileExists(atPath: R.Path.Data.appendingPathComponent("3DS/sdmc")) {
                     try? FileManager.safeMoveItem(at: URL(fileURLWithPath: R.Path.Data.appendingPathComponent("3DS/sdmc")),
-                                             to: URL(fileURLWithPath: R.Path.ThreeDS.appendingPathComponent("sdmc")),
-                                             shouldReplace: true)
+                                                  to: URL(fileURLWithPath: R.Path.ThreeDS.appendingPathComponent("sdmc")),
+                                                  shouldReplace: true)
                     try? FileManager.safeRemoveItem(at: URL(fileURLWithPath: R.Path.Data.appendingPathComponent("3DS")))
                 } else {
                     try? FileManager.default.createDirectory(atPath: R.Path.ThreeDS.appendingPathComponent("sdmc"),
-                                                        withIntermediateDirectories: true)
+                                                             withIntermediateDirectories: true)
                 }
             }
             
@@ -197,6 +197,13 @@ struct ResourcesKit {
                         if systemCoreVersionNumber < 200 {
                             try? FileManager.safeRemoveItem(at: URL(fileURLWithPath: R.Path.Assets.appendingPathComponent("iphone_background.png")))
                             try? FileManager.safeRemoveItem(at: URL(fileURLWithPath: R.Path.Assets.appendingPathComponent("ipad_background.png")))
+                        }
+                        
+                        //update psp fonts
+                        if systemCoreVersionNumber < 201 {
+                            try? FileManager.safeCopyItem(at: URL(fileURLWithPath: R.Path.Resource.appendingPathComponent("Libretro/system/PPSSPP/flash0/font/jpn0.pgf")),
+                                                          to: URL(fileURLWithPath: R.Path.Document.appendingPathComponent("PPSSPP/PSP/NAND/flash0/font/jpn0.pgf")),
+                                                          shouldReplace: true)
                         }
                     }
                     

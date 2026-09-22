@@ -32,7 +32,7 @@ enum GameOption: Int, CaseIterable {
          citraShader,
          citraRightEyeRender,
          azaharEmulationAccuracy,
-         pspJitType,
+         pspJitType,//deprecated
          pspRenderer,
          pspTexture,
          ps1Bios,
@@ -46,6 +46,7 @@ enum GameOption: Int, CaseIterable {
          ndsMicrophone,
          clownMDTvStandard,
          snesVRAM,
+         wswanRotation,
          coreSettings,
          saveState,
          quickLoadState,
@@ -80,7 +81,11 @@ enum GameOption: Int, CaseIterable {
          symbianDevice,
          wiiControllerMode,
          coverScraping,
-         dolphinCpuCore
+         dolphinCpuCore,
+         slowMotion,
+         ndsLidToggle,
+         editLink,
+         skinButtonBinding
         
     //When adding a new option, make sure to add it at the end; otherwise, it might affect the existing Prefference configurations
     
@@ -106,7 +111,7 @@ enum GameOption: Int, CaseIterable {
                 .symbolImage(R.image.category_iconSymbols())
         case .genHomeMenu:
                 .symbolImage(R.image.home_iconSymbols())
-        case .copyLink:
+        case .copyLink, .editLink:
                 .symbolImage(R.image.link_iconSymbols())
         case .shareRom:
                 .symbolImage(R.image.shareRa_iconSymbols())
@@ -180,7 +185,7 @@ enum GameOption: Int, CaseIterable {
                 .symbolImage(R.image.airplay_iconSymbols())
         case .controllerSetting:
                 .symbolImage(R.image.controller_iconSymbols())
-        case .orientation:
+        case .orientation, .wswanRotation:
                 .symbolImage(R.image.autorotate_iconSymbols())
         case .gameOptionSort:
                 .symbolImage(R.image.systemtypeRegular_iconSymbols())
@@ -224,6 +229,12 @@ enum GameOption: Int, CaseIterable {
                 .symbolImage(R.image.online_iconSymbols())
         case .symbianDevice:
                 .symbol(.candybarphone)
+        case .slowMotion:
+                .symbol(.slowmo)
+        case .ndsLidToggle:
+                .symbol(.squareTophalfFilled)
+        case .skinButtonBinding:
+                .symbolImage(R.image.keyboard_iconSymbols())
         }
     }
     
@@ -255,6 +266,8 @@ enum GameOption: Int, CaseIterable {
             R.string.localizable.generateHomeMenu()
         case .copyLink:
             R.string.localizable.copyLaunchLinkTitle()
+        case .editLink:
+            R.string.localizable.editLink()
         case .retroAchievements:
             "RetroAchievements"
         case .cheatCode:
@@ -276,7 +289,7 @@ enum GameOption: Int, CaseIterable {
         case .azaharEmulationAccuracy:
             R.string.localizable.emulationAccuracy()
         case .pspJitType:
-            R.string.localizable.jitType()
+            ""
         case .pspRenderer:
             R.string.localizable.rendererTitle()
         case .pspTexture:
@@ -371,6 +384,14 @@ enum GameOption: Int, CaseIterable {
             R.string.localizable.coverScraping()
         case .dolphinCpuCore:
             R.string.localizable.cpuEmulationMethod()
+        case .slowMotion:
+            R.string.localizable.slowMotion()
+        case .wswanRotation:
+            R.string.localizable.wSwanRotateDisplay()
+        case .ndsLidToggle:
+            R.string.localizable.ndsLidToggle()
+        case .skinButtonBinding:
+            R.string.localizable.skinButtonBinding()
         }
     }
     
@@ -382,8 +403,6 @@ enum GameOption: Int, CaseIterable {
             return R.string.localizable.shaderModeDesc()
         case .citraRightEyeRender:
             return R.string.localizable.renderRightEyeDesc()
-        case .pspJitType:
-            return R.string.localizable.jitTypeDesc()
         case .pspRenderer:
             return R.string.localizable.rendererDesc()
         case .pspTexture:
@@ -418,7 +437,6 @@ enum GameOption: Int, CaseIterable {
             return R.string.localizable.airPlayLayoutTips()
         case .language:
             return R.string.localizable.consoleLanguageDesc()
-            
         default:
             return nil
         }
@@ -427,6 +445,7 @@ enum GameOption: Int, CaseIterable {
     private static let disableOptionsForMultiGames: [Self] = [
         .rename,
         .cover,
+        .editLink,
         .stateList,
         .importSave,
         .copyLink,
@@ -446,12 +465,14 @@ enum GameOption: Int, CaseIterable {
         .simBlowing,
         .swapDisk,
         .insertDisc,
+        .ndsLidToggle
     ]
     
     static let defaultGroupAndSort: [[Self]] = [
         [
             .rename,
             .cover,
+            .editLink,
             .coverScraping,
             .skins
         ],
@@ -496,6 +517,9 @@ enum GameOption: Int, CaseIterable {
             .symbianDevice,
             .wiiControllerMode,
             .dolphinCpuCore,
+            .wswanRotation,
+            .ndsLidToggle,
+            .skinButtonBinding,
             .coreSettings,
         ],
         [
@@ -503,6 +527,7 @@ enum GameOption: Int, CaseIterable {
             .quickLoadState,
             .volume,
             .fastForward,
+            .slowMotion,
             .shaders,
             .screenShot,
             .haptic,
@@ -614,15 +639,6 @@ enum GameOption: Int, CaseIterable {
                 ($0.getExtraInt(key: extraKey) ?? 0) == firstGameValue
             }) {
                 return .chevron(firstGameValue == 0 ? "HLE" : "LLE")
-            }
-            
-        case .pspJitType:
-            let extraKey = ExtraKey.jitType.rawValue
-            let firstGameValue = firstGame.getExtraInt(key: extraKey) ?? 0
-            if games.allSatisfy({
-                ($0.getExtraInt(key: extraKey) ?? 0) == firstGameValue
-            }) {
-                return .chevron(firstGameValue == 0 ? "JIT" : "IR JIT")
             }
             
         case .pspRenderer:
@@ -803,6 +819,8 @@ enum GameOption: Int, CaseIterable {
                     }
                 } else if firstGame.gameType == .nes || firstGame.gameType == .fds {
                     return .chevron(firstGame.currentNesPalette.name)
+                } else if firstGame.effectiveGameType == .ws {
+                    return .chevron(firstGame.wswanPaletteTitle)
                 }
             }
             
@@ -924,7 +942,7 @@ enum GameOption: Int, CaseIterable {
             let firstGameValue = firstGame.getExtraInt(key: extraKey) ?? 0
             if games.allSatisfy({
                 ($0.getExtraInt(key: extraKey) ?? 0) == firstGameValue
-            }) {
+            }), R.Strings.WiiControllers.indices.contains(firstGameValue) {
                 return .chevron(R.Strings.WiiControllers[firstGameValue])
             }
         
@@ -937,8 +955,35 @@ enum GameOption: Int, CaseIterable {
                 return .chevron(R.Strings.DolphinCPUs[firstGameValue ? 0 : 1])
             }
             
+        case .slowMotion:
+            let extraKey = ExtraKey.slowMotionSpeed.rawValue
+            let firstGameValue = firstGame.getExtraInt(key: extraKey) ?? 0
+            if games.allSatisfy({
+                ($0.getExtraInt(key: extraKey) ?? 0) == firstGameValue
+            }) {
+                if firstGameValue == 0 {
+                    return .chevron(R.string.localizable.gameSettingFastForwardResume())
+                } else if let speed = SlowMotionSpeed(rawValue: firstGameValue) {
+                    return .chevron(speed.title)
+                }
+            }
+            
+        case .wswanRotation:
+            let extraKey = ExtraKey.wswanRotation.rawValue
+            let firstGameValue = firstGame.getExtraInt(key: extraKey) ?? 0
+            if games.allSatisfy({
+                ($0.getExtraInt(key: extraKey) ?? 0) == firstGameValue
+            }) {
+                if firstGameValue == 0 {
+                    return .chevron(R.string.localizable.skinSegmentLandscapeTitle())
+                } else {
+                    return .chevron(R.string.localizable.skinSegmentPortraitTitle())
+                }
+            }
+            
         case .rename,
                 .cover,
+                .editLink,
                 .skins,
                 .stateList,
                 .importSave,
@@ -963,7 +1008,10 @@ enum GameOption: Int, CaseIterable {
                 .reload,
                 .quit,
                 .gameShortcut,
-                .coverScraping:
+                .coverScraping,
+                .ndsLidToggle,
+                .pspJitType,
+                .skinButtonBinding:
             break
         }
         return .chevron(nil)
@@ -983,6 +1031,8 @@ enum GameOption: Int, CaseIterable {
                 .insertDisc,
                 .reload,
                 .quit,
+                .ndsLidToggle,
+                .pspJitType,
             ]
         case .gameInfo:
             return disableOptionsForScene(.common) + [.rename, .genHomeMenu, .coverScraping]
@@ -1048,6 +1098,10 @@ enum GameOption: Int, CaseIterable {
             return options
         }
         
+        if game.isUrlGame {
+            return [.cover, .editLink, .delete]
+        }
+        
         if game.gameType.externalType {
             return [.rename, .cover, .delete]
         }
@@ -1061,6 +1115,7 @@ enum GameOption: Int, CaseIterable {
         }
         
         var allOptions = Set(GameOption.allCases)
+        allOptions.remove(.editLink)
         
         if GameType.gameTypes(multiPlatformFileExtension: game.fileExtension).count == 0 {
             allOptions.remove(.platformChange)
@@ -1068,7 +1123,8 @@ enum GameOption: Int, CaseIterable {
         
         if game.gameType.supportCores.count == 0 ||
             (game.gameType == .ss && game.fileExtension.lowercased() == "iso") ||
-            game.isArticBaseHomeMenu {
+            game.isArticBaseHomeMenu ||
+            game.isSegaArcade {
             allOptions.remove(.switchCore)
         }
         
@@ -1223,11 +1279,11 @@ enum GameOption: Int, CaseIterable {
         }
         
         if PlayViewController.isWFCConnect {
-            allOptions.subtract([.saveState, .quickLoadState, .fastForward, .stateList, .cheatCode, .rewind])
+            allOptions.subtract([.saveState, .quickLoadState, .fastForward, .stateList, .cheatCode, .rewind, .slowMotion])
         }
         
         if PlayViewController.isHardcoreMode {
-            allOptions.subtract([.quickLoadState, .cheatCode, .triggerPro, .rewind])
+            allOptions.subtract([.quickLoadState, .cheatCode, .triggerPro, .rewind, .slowMotion])
         }
         
         if !game.supportRewind {
@@ -1256,6 +1312,22 @@ enum GameOption: Int, CaseIterable {
         
         if !game.isDolphinCore || (LibretroCore.jitAvailable() && game.jit) {
             allOptions.remove(.dolphinCpuCore)
+        }
+        
+        if !game.supportSlowMotion {
+            allOptions.remove(.slowMotion)
+        }
+        
+        if game.gameType != .wsc {
+            allOptions.remove(.wswanRotation)
+        }
+        
+        if game.gameType != .ds {
+            allOptions.remove(.ndsLidToggle)
+        }
+        
+        if game.gameType != .flash {
+            allOptions.remove(.skinButtonBinding)
         }
         
         allOptions.subtract(disableOptionsForScene(scene))
@@ -1304,7 +1376,8 @@ enum GameOption: Int, CaseIterable {
                                                             .palette,
                                                             .triggerPro,
                                                             .gameShortcut,
-                                                            .symbianDevice],
+                                                            .symbianDevice,
+                                                            .skinButtonBinding],
                                                   condition: {
                 !games.allSatisfy({ $0.gameType == firstGame.gameType })
             })

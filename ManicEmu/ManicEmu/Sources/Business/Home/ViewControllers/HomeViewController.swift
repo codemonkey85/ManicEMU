@@ -198,6 +198,9 @@ class HomeViewController: BaseViewController {
             NotificationCenter.default.post(name: R.NotificationName.ViewWillTransition, object: nil)
         }
         homeTabBarBlurView.isHidden = UIDevice.isLandscape
+        if currentChildViewController is GamesViewController {
+            updateGamesFocusCommands(focusContext: currentChildViewController.focusContext)
+        }
         coordinator.animate(alongsideTransition: { [weak self] _ in
             guard let self else { return }
             if UIDevice.isPhone {
@@ -333,8 +336,26 @@ class HomeViewController: BaseViewController {
                 }),
                 FocusCommand(key: FocusKey("control+3"), title: R.string.localizable.tabbarTitleSettings(), action: { [weak self] in
                     self?.homeTabBar.currentSelection = .settings
+                }),
+                FocusCommand(key: FocusKey("l2"), title: R.string.localizable.nextTap(), action: { [weak self] in
+                    self?.homeTabBar.previousSelection()
+                }),
+                FocusCommand(key: FocusKey("r2"), title: R.string.localizable.previousTap(), action: { [weak self] in
+                    self?.homeTabBar.nextSelection()
                 })
             ])
+            
+            if self.homeTabBar.currentSelection == .games {
+                var commands = [FocusCommand(key: FocusKey("l1"), title: R.string.localizable.scrollToFirstGame(), action: { [weak self] in
+                    self?.gamesViewController.scrollToFirstGame()
+                }),
+                 FocusCommand(key: FocusKey("r1"), title: R.string.localizable.scrollToLastGame(), action: { [weak self] in
+                    self?.gamesViewController.scrollToLastGame()
+                })]
+                self.updateGamesFocusCommands(focusContext: context)
+                context.addCommands(commands)
+            }
+            
             context.onFocusChange = { [weak self] focusView, attemptedDirection in
                 guard let self, focusView == nil, let attemptedDirection else { return }
                 self.handleTabFocusExit(attemptedDirection)
@@ -361,6 +382,17 @@ class HomeViewController: BaseViewController {
         }
         shouldHandoffTabFocus = true
         homeTabBar.currentSelection = newSelection
+    }
+    
+    private func updateGamesFocusCommands(focusContext: FocusContext) {
+        guard currentChildViewController is GamesViewController else { return }
+        if UIDevice.isLandscape {
+            focusContext.addCommand(FocusCommand(key: FocusKey("l3"), title: R.string.localizable.filterTitle(), action: {
+                NotificationCenter.default.post(name: R.NotificationName.ShowFilterForLandscapeMode, object: nil)
+            }))
+        } else {
+            focusContext.removeCommands(for: FocusKey("l3"))
+        }
     }
 }
 

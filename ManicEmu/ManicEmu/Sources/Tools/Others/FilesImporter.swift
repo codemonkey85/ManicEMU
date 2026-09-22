@@ -471,6 +471,7 @@ extension FilesImporter {
                     guard let ciaPath = ciaInfo.contentPath else {
                         Log.debug("安装CIA出错，无法获取CIA的安装路径")
                         Self.removeCIA(ciaTitleUrl: ciaTitleUrl)
+                        Self.discardRommPending(fileName: originalUrl.lastPathComponent)
                         completion?(nil, nil, .badFile(fileName: url.lastPathComponent.deletingPathExtension))
                         return
                     }
@@ -485,17 +486,20 @@ extension FilesImporter {
                             DispatchQueue.main.async {
                                 UIView.makeToast(message: R.string.localizable.threeDSUpdateInstallSuccess(), identifier: "threeDSUpdateInstallSuccess")
                             }
+                            Self.discardRommPending(fileName: originalUrl.lastPathComponent)
                             completion?(nil, nil, nil)
                             return
                         }
                     case .errorEncrypted:
                         Log.debug("CIA加密了")
                         Self.removeCIA(ciaTitleUrl: ciaTitleUrl)
+                        Self.discardRommPending(fileName: originalUrl.lastPathComponent)
                         completion?(nil, nil, .decryptFailed(fileName: url.lastPathComponent))
                         return
                     default:
                         Log.debug("CIA安装失败")
                         Self.removeCIA(ciaTitleUrl: ciaTitleUrl)
+                        Self.discardRommPending(fileName: originalUrl.lastPathComponent)
                         completion?(nil, nil, .badFile(fileName: url.lastPathComponent))
                         return
                     }
@@ -506,6 +510,7 @@ extension FilesImporter {
                 } else {
                     Log.debug("无法获取3DS ROM信息")
                     Self.removeCIA(ciaTitleUrl: ciaTitleUrl)
+                    Self.discardRommPending(fileName: originalUrl.lastPathComponent)
                     completion?(nil, nil, .badFile(fileName: url.lastPathComponent))
                     return
                 }
@@ -532,7 +537,8 @@ extension FilesImporter {
                 }
                 
                 if let game = realm.object(ofType: Game.self, forPrimaryKey: hash) {
-                    //游戏已经存在于数据库中
+                    // Already in the library: drop the pending RomM link so an old game is not rebound.
+                    Self.discardRommPending(fileName: originalUrl.lastPathComponent)
                     if game.isRomExtsts {
                         //游戏文件也存在
                         Log.debug("导入游戏失败，游戏已经存在数据库")
@@ -551,10 +557,9 @@ extension FilesImporter {
                                     try FileManager.safeCopyItem(at: item, to: URL(fileURLWithPath: romParentPath.appendingPathComponent(item.lastPathComponent)), shouldReplace: true)
                                 }
                                 // Upload all files (main + companions) to iCloud
-                                SyncManager.upload(localFilePath: romUrl.path)
-                                for item in items {
-                                    SyncManager.upload(localFilePath: romParentPath.appendingPathComponent(item.lastPathComponent))
-                                }
+                                FilesSyncManager.shared.uploadROMFiles(for: game, extraFiles: items.map {
+                                    URL(fileURLWithPath: romParentPath.appendingPathComponent($0.lastPathComponent))
+                                })
                                 recoverDeletedGame(game, realm: realm, recoverFaile: {
                                     completion?(game.id, game.name, nil)
                                 })
@@ -562,6 +567,7 @@ extension FilesImporter {
                                 
                             } else {
                                 try FileManager.safeCopyItem(at: url, to: game.romUrl, shouldReplace: true)
+                                FilesSyncManager.shared.uploadROMFiles(for: game)
                                 //文件复制成功
                                 recoverDeletedGame(game, realm: realm, recoverFaile: {
                                     completion?(game.id, game.name, nil)
@@ -623,18 +629,24 @@ extension FilesImporter {
                     
                     var gameType = isPSPPBP ? .psp : GameType(fileExtension: game.fileExtension)
                     
-                    if game.fileExtension.lowercased() == "zip" && MAMEKit.isSupportTitle(fileName: game.name) {
+                    if (game.fileExtension.lowercased() == "zip" || game.fileExtension.lowercased() == "7z") &&
+                        MAMEKit.isSupportTitle(fileName: game.name) {
                         gameType = .arcade
+                        if R.Strings.NaomiTitles.contains(game.name) {
+                            game.extras = [ExtraKey.arcadeType.rawValue: 1].jsonData()
+                        } else if R.Strings.AtomiswaveTitles.contains(game.name) {
+                            game.extras = [ExtraKey.arcadeType.rawValue: 2].jsonData()
+                        } else if R.Strings.SegaSPTitles.contains(game.name) {
+                            game.extras = [ExtraKey.arcadeType.rawValue: 3].jsonData()
+                        }
+                        if let mameInfo = MAMEKit.getMAMEInfo(fileName: game.name) {
+                            game.aliasName = mameInfo.name
+                        }
                     }
                     
                     if gameType != .notSupport {
                         game.gameType = gameType
                         ///Handling game info for specific game types.
-                        
-                        //archde
-                        if gameType == .arcade, let mameInfo = MAMEKit.getMAMEInfo(fileName: game.name) {
-                            game.aliasName = mameInfo.name
-                        }
 #if !SIDE_LOAD
                         //32x mcd
                         if game.gameType == ._32x || gameType == .mcd {
@@ -653,6 +665,13 @@ extension FilesImporter {
                         if game.gameType == .j2me, let j2MEManifest = J2MEManifest.read(from: url.path) {
                             game.aliasName = j2MEManifest.displayName
                             game.extras = [ExtraKey.j2meScreenSize.rawValue: j2MEManifest.screenSize.stringValue].jsonData()
+                            if let iconData = j2MEManifest.imageData {
+                                game.gameCover = CreamAsset.create(objectID: game.id, propName: "gameCover", data: iconData)
+                            }
+                        }
+
+                        if game.gameType == .flash, let coverData = FLASHCover.extractJPEGData(from: url) {
+                            game.gameCover = CreamAsset.create(objectID: game.id, propName: "gameCover", data: coverData)
                         }
                         
                         //Obtain the game code for PSP.
@@ -660,17 +679,27 @@ extension FilesImporter {
                             game.extras = [ExtraKey.PSPGameCode.rawValue: gameCode].jsonData()
                         }
 
-                        if game.isDolphinCore, let dolphinID = DolphinGameID.read(from: url) {
-                            if let extras = game.extras,
-                               let data = Game.updateExtra(extras: extras, key: ExtraKey.dolphinGameID.rawValue, value: dolphinID) {
-                                game.extras = data
-                            } else {
-                                game.extras = [ExtraKey.dolphinGameID.rawValue: dolphinID].jsonData()
+                        if game.isDolphinCore {
+                            if let dolphinID = DolphinGameID.read(from: url) {
+                                if let extras = game.extras,
+                                   let data = Game.updateExtra(extras: extras, key: ExtraKey.dolphinGameID.rawValue, value: dolphinID) {
+                                    game.extras = data
+                                } else {
+                                    game.extras = [ExtraKey.dolphinGameID.rawValue: dolphinID].jsonData()
+                                }
                             }
+                            game.region = 1
                         }
                         
                         if game.gameType == .ngp {
                             game.extras = [ExtraKey.gameTypeCategory.rawValue: 1].jsonData()
+                        }
+                        
+                        if game.gameType == .wsc {
+                            let ext = url.pathExtension.lowercased()
+                            if ext == "ws" || ext == "pc2" || ext == "pcv2" {
+                                game.extras = [ExtraKey.gameTypeCategory.rawValue: 1].jsonData()
+                            }
                         }
                         
                         do {
@@ -690,16 +719,21 @@ extension FilesImporter {
                                 }
                             }
                             do {
-                                try realm.write { realm.add(game) }
-                                SyncManager.upload(localFilePath: game.romUrl.path)
-                                // Upload companion files (.bin, .img, .sub, etc.) for multi-file ROMs
-                                if items.count > 0 {
-                                    let romParentPath = game.romUrl.path.deletingLastPathComponent
-                                    for item in items {
-                                        SyncManager.upload(localFilePath: romParentPath.appendingPathComponent(item.lastPathComponent))
-                                    }
+                                try realm.write {
+                                    FilesSyncPolicy.applyDefaultROMSyncFlag(to: game)
+                                    realm.add(game)
                                 }
-                                OnlineCoverManager.shared.addCoverMatch(OnlineCoverManager.CoverMatch(game: game))
+                                FilesSyncManager.shared.uploadROMFiles(for: game, extraFiles: items.map {
+                                    URL(fileURLWithPath: game.romUrl.path.deletingLastPathComponent.appendingPathComponent($0.lastPathComponent))
+                                })
+                                if RommLibrary.shared.hasPendingLink(fileName: originalUrl.lastPathComponent)
+                                    || RommLibrary.shared.hasPendingLink(fileName: game.fileName) {
+                                    Log.debug("[RomM] import success, apply sidecar original=\(originalUrl.lastPathComponent) gameFile=\(game.fileName) gameId=\(game.id)")
+                                    RommLibrary.shared.applyAfterImport(gameId: game.id, fileName: originalUrl.lastPathComponent)
+                                } else {
+                                    Log.debug("[RomM] import success, no pending link original=\(originalUrl.lastPathComponent) gameFile=\(game.fileName)")
+                                    OnlineCoverManager.shared.addCoverMatch(OnlineCoverManager.CoverMatch(game: game))
+                                }
                                 completion?(game.id, game.gameType == ._3ds ? (game.displayName) : game.name, nil)
                                 
                                 return
@@ -709,6 +743,7 @@ extension FilesImporter {
                                 if let ciaTitleUrl {
                                     try? FileManager.safeRemoveItem(at: ciaTitleUrl)
                                 }
+                                Self.discardRommPending(fileName: originalUrl.lastPathComponent)
                                 completion?(nil, nil, .writeDatabase(fileName: game.name))
                                 return
                             }
@@ -718,6 +753,7 @@ extension FilesImporter {
                             if let ciaTitleUrl {
                                 try? FileManager.safeRemoveItem(at: ciaTitleUrl)
                             }
+                            Self.discardRommPending(fileName: originalUrl.lastPathComponent)
                             completion?(nil, nil, .badCopy(fileName: game.name))
                             return
                         }
@@ -725,6 +761,7 @@ extension FilesImporter {
                         //无法识别文件类型
                         Log.debug("导入游戏失败，后缀不正确\(game.fileName)")
                         Self.removeCIA(ciaTitleUrl: ciaTitleUrl)
+                        Self.discardRommPending(fileName: originalUrl.lastPathComponent)
                         completion?(nil, nil, .badExtension(fileName: game.name))
                         return
                     }
@@ -733,10 +770,15 @@ extension FilesImporter {
                 //无法计算文件哈希
                 Log.debug("导入游戏失败，无法计算文件哈希")
                 Self.removeCIA(ciaTitleUrl: ciaTitleUrl)
+                Self.discardRommPending(fileName: originalUrl.lastPathComponent)
                 completion?(nil, nil, .unableToHash(fileName: url.lastPathComponent))
                 return
             }
         }
+    }
+    
+    private static func discardRommPending(fileName: String) {
+        RommLibrary.shared.discardPendingLink(fileName: fileName)
     }
     
     private static func removeCIA(ciaTitleUrl: URL?) {
@@ -872,7 +914,6 @@ extension FilesImporter {
                             try realm.write {
                                 realm.add(skin)
                             }
-                            SyncManager.upload(localFilePath: skin.fileURL.path)
                             completion?(skin.name, nil)
                             return
                         } catch {
@@ -1249,31 +1290,27 @@ extension FilesImporter {
                         continue
                     }
                     for fileName in fileNames {
-                        //读取m3u的每一行
+                        // Read each playlist entry and require the referenced file to be in this import batch.
                         if !fileName.isEmpty {
-                            //查询这个文件是否存在
                             if let fileUrl = urls.first(where: { $0.lastPathComponent == fileName}) {
-                                if fileUrl.pathExtension.lowercased() == "cue" {
-                                    //cue文件则从cueItems中进行判断
-                                    if let cue = multiFileItems.first(where: { $0.url.lastPathComponent == fileName }) {
-                                        //cue文件存在 则排除这个cue
-                                        excludeMultiFiles.append(cue)
-                                        excludeUrls.append(cue.url)
-                                        m3uFiles.append(cue.url)
-                                        m3uFiles.append(contentsOf: cue.files)
+                                let playlistExt = fileUrl.pathExtension.lowercased()
+                                if playlistExt == "cue" || playlistExt == "gdi" {
+                                    // Attach cue/gdi companion tracks so they are not imported as separate games.
+                                    if let companion = multiFileItems.first(where: { $0.url.lastPathComponent == fileName }) {
+                                        excludeMultiFiles.append(companion)
+                                        excludeUrls.append(companion.url)
+                                        m3uFiles.append(companion.url)
+                                        m3uFiles.append(contentsOf: companion.files)
                                     } else {
-                                        //m3u中的不包含这个cue文件 说明这个m3u不合法，文件有缺失 则不导入这个m3u文件，并且将m3u中的其他文件也一并排除
                                         isBadM3u = true
                                         missFileName = fileName
                                     }
                                 } else {
-                                    //文件存在 则将这个文件排除，不再需要导入
                                     excludeUrls.append(fileUrl)
                                     m3uFiles.append(fileUrl)
                                 }
 
                             } else {
-                                //m3u中的文件不存在 说明这个m3u不合法，文件有缺失 则不导入这个m3u文件，并且将m3u中的其他文件也一并排除
                                 isBadM3u = true
                                 missFileName = fileName
                                 break
@@ -1281,10 +1318,9 @@ extension FilesImporter {
                         }
                     }
                     if isBadM3u {
-                        //排除错误文件
                         excludeUrls.append(url)
                         for fileName in fileNames {
-                            if fileName.pathExtension.lowercased() == "cue" {
+                            if fileName.pathExtension.lowercased() == "cue" || fileName.pathExtension.lowercased() == "gdi" {
                                 excludeMultiFiles.append(contentsOf: multiFileItems.filter({ $0.url.lastPathComponent == fileName }))
                             } else {
                                 excludeUrls.append(contentsOf: urls.filter({ $0.lastPathComponent == fileName }))
@@ -1292,12 +1328,10 @@ extension FilesImporter {
                         }
                         resultErrors.append(.missingFile(errorFileName: url.lastPathComponent, missingFileName: missFileName))
                     } else {
-                        //m3u文件合法
                         resultUrls.append(url)
                         resultM3uItems.append(MultiFileRom(url: url, files: m3uFiles))
                     }
                 } else {
-                    //无法读取m3u文件
                     resultErrors.append(.badFile(fileName: url.lastPathComponent))
                 }
             } else {
@@ -1305,7 +1339,6 @@ extension FilesImporter {
             }
         }
         
-        //排除m3u的files
         resultUrls.removeAll(where: { excludeUrls.contains([$0]) })
         
         let resultCueItems = multiFileItems.filter { originCue in

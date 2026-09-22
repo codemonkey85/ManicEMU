@@ -97,12 +97,12 @@ i18n/
 Scripts/System.core.ver
 ManicEmu/ManicEmu/Resources/System.core
 AppStoreConnect
+SideloadStore
 
 #claude code
 .claude
 CLAUDE.md
 SKILL.md
-.xcodebuildmcp
 
 #cursor
 .cursor
